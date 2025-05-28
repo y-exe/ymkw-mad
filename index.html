@@ -19,7 +19,7 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
-        .disabled-control { /* Added for visual indication of disabled controls */
+        .disabled-control { /* 無効化されたコントロールの視覚的表示 */
             opacity: 0.6;
         }
         /* Firefoxのrange入力のデフォルトスピナーを隠す */
@@ -96,7 +96,7 @@
                 <div class="space-y-3">
                     <div class="flex items-center justify-between text-sm text-gray-600">
                         <span id="redzoneTime">0:00 / 0:00</span>
-                        <span>&nbsp;</span>
+                        <span> </span>
                     </div>
                     <input type="range" id="redzoneSeek" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500" disabled>
                     <div>
@@ -170,8 +170,8 @@
                 const targetElement = isError ? errorMessages : statusMessage;
                 targetElement.textContent = message;
                 targetElement.classList.remove('hidden');
-                if (!isError && statusMessage.textContent) errorMessages.classList.add('hidden');
-                else if (isError && errorMessages.textContent) statusMessage.classList.add('hidden');
+                if (isError) statusMessage.classList.add('hidden');
+                else errorMessages.classList.add('hidden');
             }
             
             /**
@@ -202,7 +202,6 @@
                 if (bothVideosLoaded) {
                     playBothBtn.classList.remove('disabled-button');
                     resetBothBtn.classList.remove('disabled-button');
-                    // setDefaultPanBtn.classList.remove('disabled-button'); // Panning is disabled
                     
                     const otomadDur = otomadVideo.duration || 0;
                     const redzoneDur = redzoneVideo.duration || 0;
@@ -215,11 +214,10 @@
                 } else {
                     playBothBtn.classList.add('disabled-button');
                     resetBothBtn.classList.add('disabled-button');
-                    // setDefaultPanBtn.classList.add('disabled-button'); // Panning is disabled
-                     if (otomadLoaded) { 
+                    if (otomadLoaded) { 
                         masterSeek.max = otomadVideo.duration || 100;
                         masterSeek.disabled = false;
-                         masterTime.textContent = `${formatTime(masterSeek.value)} / ${formatTime(masterSeek.max)}`;
+                        masterTime.textContent = `${formatTime(masterSeek.value)} / ${formatTime(masterSeek.max)}`;
                     } else {
                         masterSeek.disabled = true;
                     }
@@ -316,19 +314,19 @@
                         otomadVolumeValue.textContent = Math.round(videoElement.volume * 100);
                     } else {
                         redzoneVolume.value = videoElement.volume;
-                        redzoneVolumeValue.textContent = Math.round(videoElement.volume * 100);
+                        redzoneVolumeValue.textContent = Math.round(redzoneVolume.volume * 100);
                     }
                      console.log(`${isOtomad ? 'OtoMAD' : 'Redzone'} volume changed to: ${videoElement.volume}`);
                 };
             }
             
-            // Initialize video elements and load sources
+            // Initialize video elements and load sources with Firebase Hosting URLs
             setupVideoEvents(otomadVideo, true);
-            otomadVideo.src = "音MAD.mp4";
+            otomadVideo.src = "https://ymkw-mad.web.app/%E9%9F%B3MAD.mp4";
             otomadVideo.load();
 
             setupVideoEvents(redzoneVideo, false);
-            redzoneVideo.src = "原曲.mp4";
+            redzoneVideo.src = "https://ymkw-mad.web.app/%E5%8E%9F%E6%9B%B2.mp4";
             redzoneVideo.load();
             
             updateAllControlsAvailability();
@@ -337,7 +335,7 @@
             otomadLoop.addEventListener('change', () => {
                 if (otomadLoaded) {
                     otomadVideo.loop = otomadLoop.checked;
-                    // If OtoMAD loop is checked, and both are loaded, loop Redzone too
+                    // 音MADがループ設定されたら、原曲もループ設定を同期
                     if (redzoneLoaded) {
                         redzoneVideo.loop = otomadLoop.checked;
                     }
@@ -352,13 +350,6 @@
             });
             // Panning controls are disabled. No event listener needed.
 
-            otomadVideo.addEventListener('timeupdate', () => {
-                if (otomadLoaded) {
-                    otomadSeek.value = otomadVideo.currentTime;
-                    otomadTime.textContent = `${formatTime(otomadVideo.currentTime)} / ${formatTime(otomadVideo.duration || 0)}`;
-                }
-            });
-
             redzoneSeek.addEventListener('input', () => { if (redzoneLoaded) redzoneVideo.currentTime = redzoneSeek.value; });
             redzoneVolume.addEventListener('input', () => {
                 if (redzoneLoaded) {
@@ -367,13 +358,6 @@
                 }
             });
             // Panning controls are disabled. No event listener needed.
-
-            redzoneVideo.addEventListener('timeupdate', () => {
-                if (redzoneLoaded) {
-                    redzoneSeek.value = redzoneVideo.currentTime;
-                    redzoneTime.textContent = `${formatTime(redzoneVideo.currentTime)} / ${formatTime(redzoneVideo.duration || 0)}`;
-                }
-            });
 
             // Simplified handlePlayRequest as Web Audio API is removed
             function handlePlayRequest(playFn) {
@@ -450,7 +434,7 @@
                     currentVideoDuration = (redzoneLoaded && !redzoneVideo.paused) ? Math.min(otomadVideo.duration || 0, redzoneVideo.duration || 0) : (otomadVideo.duration || 0);
                 } else if (redzoneLoaded && !redzoneVideo.paused) {
                     currentVideoTime = redzoneVideo.currentTime;
-                     currentVideoDuration = redzoneVideo.duration || 0; 
+                    currentVideoDuration = redzoneVideo.duration || 0; 
                 } else { 
                     requestAnimationFrame(syncMasterSeek);
                     return;
@@ -459,6 +443,16 @@
                 if (currentVideoTime <= currentVideoDuration) {
                     masterSeek.value = currentVideoTime;
                     masterTime.textContent = `${formatTime(currentVideoTime)} / ${formatTime(currentVideoDuration || 0)}`;
+
+                    // 個別のシークバーも同期
+                    if (otomadLoaded) {
+                        otomadSeek.value = otomadVideo.currentTime;
+                        otomadTime.textContent = `${formatTime(otomadVideo.currentTime)} / ${formatTime(otomadVideo.duration || 0)}`;
+                    }
+                    if (redzoneLoaded) {
+                        redzoneSeek.value = redzoneVideo.currentTime;
+                        redzoneTime.textContent = `${formatTime(redzoneVideo.currentTime)} / ${formatTime(redzoneVideo.duration || 0)}`;
+                    }
                 }
                 requestAnimationFrame(syncMasterSeek);
             }
