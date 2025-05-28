@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>やまかわ音MAD調整プレビュー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        video {
+            background-color: #000;
+            min-height: 200px; /* 動画ロード前の最小高さ */
+            width: 100%; /* 幅を100%に設定 */
+            border-radius: 0.25rem; /* Tailwindのrounded相当 */
+        }
+        .disabled-button {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .disabled-control { /* Added for visual indication of disabled controls */
+            opacity: 0.6;
+        }
+        /* Firefoxのrange入力のデフォルトスピナーを隠す */
+        input[type=range]::-moz-range-thumb {
+            /* 必要であればここでthumbのスタイルを調整 */
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="mb-6 pb-4 border-b border-gray-300">
+            <div class="flex flex-col sm:flex-row justify-between items-center sm:items-start">
+                <div class="text-center sm:text-left mb-2 sm:mb-0">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">やまかわ音MAD調整プレビュー</h1>
+                    <p class="text-md sm:text-lg text-gray-600 mb-2">原曲と同時に流したりループ再生などができます</p>
+                    <div class="flex flex-col sm:flex-row gap-2 mt-2 justify-center sm:justify-start">
+                        <img src="https://img.shields.io/badge/GitHub-y--exe-blue?logo=github&style=flat-square" alt="GitHub y-exe" onerror="this.style.display='none'">
+                        <img src="https://img.shields.io/github/last-commit/yexe/ymkw-mad?style=flat-square&label=ymkw-mad%20last%20commit" alt="Last commit for yexe/ymkw-mad" onerror="this.style.display='none'">
+                    </div>
+                </div>
+                <div>
+                    <img src="https://count.getloli.com/@yexe.net" alt=":counter" class="h-24 mt-2 sm:mt-0 mx-auto" onerror="this.style.display='none'">
+                    <p class="text-xs text-gray-500 text-center mt-1">カウンターは yexe.net の総合です</p>
+                </div>
+            </div>
+        </header>
+
+        <div id="statusMessage" class="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center hidden"></div>
+        <div id="errorMessages" class="mb-4 p-3 bg-red-100 text-red-800 rounded-lg text-center hidden"></div>
+
+        <div class="bg-gray-100 p-4 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-center text-gray-700">再生コントロール</h2>
+            <div class="flex flex-wrap justify-center gap-2 sm:gap-3">
+                <button id="playOtomadOnlyBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out disabled-button" disabled>音MADのみ再生</button>
+                <button id="playBothBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out disabled-button" disabled>両方再生 (同期)</button>
+                <button id="pauseBothBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out disabled-button" disabled>一時停止</button>
+                <button id="resetBothBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out disabled-button" disabled>リセット (0秒へ)</button>
+                <button id="setDefaultPanBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out disabled-button disabled-control" disabled>パン初期設定 <span class="text-xs">(無効中)</span></button>
+            </div>
+            <div class="mt-4">
+                <label for="masterSeek" class="block text-sm font-medium text-gray-700 mb-1 text-center">マスターシーク: <span id="masterTime" class="font-mono">0:00 / 0:00</span></label>
+                <input type="range" id="masterSeek" value="0" class="w-full md:w-3/4 lg:w-1/2 mx-auto h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-purple-500" disabled>
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-3 text-gray-700">音MAD (音MAD.mp4)</h2>
+                <video id="otomadVideo" class="aspect-video mb-3" controls></video>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between text-sm text-gray-600">
+                        <span id="otomadTime">0:00 / 0:00</span>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="otomadLoop" class="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" disabled>
+                            <span class="ml-2">ループ再生</span>
+                        </label>
+                    </div>
+                    <input type="range" id="otomadSeek" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500" disabled>
+                    <div>
+                        <label for="otomadVolume" class="block text-sm font-medium text-gray-700">音量: <span id="otomadVolumeValue">100</span>%</label>
+                        <input type="range" id="otomadVolume" min="0" max="1" step="0.01" value="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500" disabled>
+                    </div>
+                    <div class="disabled-control">
+                        <label for="otomadPan" class="block text-sm font-medium text-gray-700">パン (左 <span id="otomadPanValue">0.00</span> 右) <span class="text-xs text-red-500">(無効中)</span>:</label>
+                        <input type="range" id="otomadPan" min="-1" max="1" step="0.01" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-3 text-gray-700">原曲 (原曲.mp4)</h2>
+                <video id="redzoneVideo" class="aspect-video mb-3" controls></video>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between text-sm text-gray-600">
+                        <span id="redzoneTime">0:00 / 0:00</span>
+                        <span>&nbsp;</span>
+                    </div>
+                    <input type="range" id="redzoneSeek" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500" disabled>
+                    <div>
+                        <label for="redzoneVolume" class="block text-sm font-medium text-gray-700">音量: <span id="redzoneVolumeValue">100</span>%</label>
+                        <input type="range" id="redzoneVolume" min="0" max="1" step="0.01" value="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500" disabled>
+                    </div>
+                    <div class="disabled-control">
+                        <label for="redzonePan" class="block text-sm font-medium text-gray-700">パン (左 <span id="redzonePanValue">0.00</span> 右) <span class="text-xs text-red-500">(無効中)</span>:</label>
+                        <input type="range" id="redzonePan" min="-1" max="1" step="0.01" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500" disabled>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Video elements
+            const otomadVideo = document.getElementById('otomadVideo');
+            const redzoneVideo = document.getElementById('redzoneVideo');
+
+            // Individual Controls
+            const otomadLoop = document.getElementById('otomadLoop');
+            const otomadSeek = document.getElementById('otomadSeek');
+            const otomadVolume = document.getElementById('otomadVolume');
+            const otomadPan = document.getElementById('otomadPan');
+            const otomadTime = document.getElementById('otomadTime');
+            const otomadVolumeValue = document.getElementById('otomadVolumeValue');
+            const otomadPanValue = document.getElementById('otomadPanValue');
+
+            const redzoneSeek = document.getElementById('redzoneSeek');
+            const redzoneVolume = document.getElementById('redzoneVolume');
+            const redzonePan = document.getElementById('redzonePan');
+            const redzoneTime = document.getElementById('redzoneTime');
+            const redzoneVolumeValue = document.getElementById('redzoneVolumeValue');
+            const redzonePanValue = document.getElementById('redzonePanValue');
+
+            // Global Controls
+            const playOtomadOnlyBtn = document.getElementById('playOtomadOnlyBtn');
+            const playBothBtn = document.getElementById('playBothBtn');
+            const pauseBothBtn = document.getElementById('pauseBothBtn');
+            const resetBothBtn = document.getElementById('resetBothBtn');
+            const setDefaultPanBtn = document.getElementById('setDefaultPanBtn');
+            const masterSeek = document.getElementById('masterSeek');
+            const masterTime = document.getElementById('masterTime');
+            
+            const statusMessage = document.getElementById('statusMessage');
+            const errorMessages = document.getElementById('errorMessages');
+
+            // Flags for video loading status
+            let otomadLoaded = false;
+            let redzoneLoaded = false;
+
+            /**
+             * Formats time in seconds into M:SS format.
+             * @param {number} seconds - The time in seconds.
+             * @returns {string} Formatted time string.
+             */
+            function formatTime(seconds) {
+                const secs = Math.floor(seconds % 60);
+                const minutes = Math.floor(seconds / 60);
+                return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+
+            /**
+             * Displays a status or error message.
+             * @param {string} message - The message to display.
+             * @param {boolean} isError - True if it's an error message, false for status.
+             */
+            function showStatus(message, isError = false) {
+                const targetElement = isError ? errorMessages : statusMessage;
+                targetElement.textContent = message;
+                targetElement.classList.remove('hidden');
+                if (!isError && statusMessage.textContent) errorMessages.classList.add('hidden');
+                else if (isError && errorMessages.textContent) statusMessage.classList.add('hidden');
+            }
+            
+            /**
+             * Updates the disabled state of all controls based on video loading status.
+             */
+            function updateAllControlsAvailability() {
+                const otomadControlsDisabled = !otomadLoaded;
+                otomadSeek.disabled = otomadControlsDisabled;
+                otomadVolume.disabled = otomadControlsDisabled;
+                otomadPan.disabled = true; // Panning is disabled
+                otomadLoop.disabled = otomadControlsDisabled;
+                
+                playOtomadOnlyBtn.disabled = otomadControlsDisabled;
+                if(otomadControlsDisabled) playOtomadOnlyBtn.classList.add('disabled-button');
+                else playOtomadOnlyBtn.classList.remove('disabled-button');
+
+                const redzoneControlsDisabled = !redzoneLoaded;
+                redzoneSeek.disabled = redzoneControlsDisabled;
+                redzoneVolume.disabled = redzoneControlsDisabled;
+                redzonePan.disabled = true; // Panning is disabled
+
+                const bothVideosLoaded = otomadLoaded && redzoneLoaded;
+                playBothBtn.disabled = !bothVideosLoaded; 
+                resetBothBtn.disabled = !bothVideosLoaded;
+                setDefaultPanBtn.disabled = true; // Panning is disabled
+                masterSeek.disabled = !bothVideosLoaded;
+
+                if (bothVideosLoaded) {
+                    playBothBtn.classList.remove('disabled-button');
+                    resetBothBtn.classList.remove('disabled-button');
+                    // setDefaultPanBtn.classList.remove('disabled-button'); // Panning is disabled
+                    
+                    const otomadDur = otomadVideo.duration || 0;
+                    const redzoneDur = redzoneVideo.duration || 0;
+
+                    if (otomadDur > 0 && redzoneDur > 0) masterSeek.max = Math.min(otomadDur, redzoneDur);
+                    else if (otomadDur > 0) masterSeek.max = otomadDur;
+                    else if (redzoneDur > 0) masterSeek.max = redzoneDur;
+                    else masterSeek.max = 100; 
+                    masterTime.textContent = `${formatTime(masterSeek.value)} / ${formatTime(masterSeek.max)}`;
+                } else {
+                    playBothBtn.classList.add('disabled-button');
+                    resetBothBtn.classList.add('disabled-button');
+                    // setDefaultPanBtn.classList.add('disabled-button'); // Panning is disabled
+                     if (otomadLoaded) { 
+                        masterSeek.max = otomadVideo.duration || 100;
+                        masterSeek.disabled = false;
+                         masterTime.textContent = `${formatTime(masterSeek.value)} / ${formatTime(masterSeek.max)}`;
+                    } else {
+                        masterSeek.disabled = true;
+                    }
+                }
+                updatePlayPauseButtons();
+            }
+            
+            /**
+             * Updates the disabled state of play/pause buttons.
+             */
+            function updatePlayPauseButtons() {
+                const otomadPlaying = otomadLoaded && !otomadVideo.paused;
+                const redzonePlaying = redzoneLoaded && !redzoneVideo.paused;
+                const anyVideoPlaying = otomadPlaying || redzonePlaying;
+
+                if (anyVideoPlaying) {
+                    pauseBothBtn.disabled = false;
+                    pauseBothBtn.classList.remove('disabled-button');
+                } else {
+                    pauseBothBtn.disabled = true;
+                    pauseBothBtn.classList.add('disabled-button');
+                }
+            }
+
+            /**
+             * Sets up common event listeners for video elements.
+             * @param {HTMLVideoElement} videoElement - The video element to set up events for.
+             * @param {boolean} isOtomad - True if it's the OtoMAD video, false for Redzone.
+             */
+            function setupVideoEvents(videoElement, isOtomad) {
+                // Ensure video is unmuted by default for direct playback
+                videoElement.muted = false; 
+                videoElement.volume = 1; // Default to full volume for the element itself
+
+                videoElement.onloadedmetadata = () => {
+                    console.log(`${isOtomad ? 'OtoMAD' : 'Redzone'} metadata loaded. Duration: ${videoElement.duration}. Muted: ${videoElement.muted}, Volume: ${videoElement.volume}`);
+                    if (isOtomad) {
+                        otomadLoaded = true;
+                        otomadTime.textContent = `${formatTime(0)} / ${formatTime(videoElement.duration || 0)}`;
+                        otomadSeek.max = videoElement.duration || 0;
+                        otomadVolume.value = videoElement.volume; // Sync slider with actual video volume
+                        otomadVolumeValue.textContent = Math.round(videoElement.volume * 100);
+                    } else {
+                        redzoneLoaded = true;
+                        redzoneTime.textContent = `${formatTime(0)} / ${formatTime(videoElement.duration || 0)}`;
+                        redzoneSeek.max = videoElement.duration || 0;
+                        redzoneVolume.value = videoElement.volume; // Sync slider
+                        redzoneVolumeValue.textContent = Math.round(videoElement.volume * 100);
+                    }
+                    updateAllControlsAvailability();
+                };
+
+                videoElement.oncanplay = () => {
+                    console.log(`${isOtomad ? 'OtoMAD' : 'Redzone'} canplay.`);
+                    updateAllControlsAvailability();
+                };
+                
+                videoElement.onplay = () => {
+                    console.log(`${isOtomad ? 'OtoMAD' : 'Redzone'} onplay.`);
+                    updatePlayPauseButtons();
+                };
+                videoElement.onpause = () => {
+                    console.log(`${isOtomad ? 'OtoMAD' : 'Redzone'} onpause.`);
+                    updatePlayPauseButtons();
+                };
+                videoElement.onended = () => {
+                    console.log(`${isOtomad ? 'OtoMAD' : 'Redzone'} onended.`);
+                    updatePlayPauseButtons();
+                };
+
+                videoElement.onerror = (e) => {
+                    let errorMsg = `動画読み込みエラー (${isOtomad ? '音MAD' : '原曲'} - ${videoElement.currentSrc.split('/').pop()}): `;
+                    if (videoElement.error) {
+                        switch (videoElement.error.code) {
+                            case MediaError.MEDIA_ERR_ABORTED: errorMsg += '中止されました。'; break;
+                            case MediaError.MEDIA_ERR_NETWORK: errorMsg += 'ネットワークエラー。ファイルパスを確認。'; break;
+                            case MediaError.MEDIA_ERR_DECODE:  errorMsg += 'デコードエラー。ファイル形式/破損の可能性。'; break;
+                            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED: errorMsg += 'ソース非対応。パス/形式を確認。'; break;
+                            default: errorMsg += `不明なエラー (コード: ${videoElement.error.code})。パスを確認。`; break;
+                        }
+                    } else {
+                        errorMsg += '不明なエラー。ファイルが存在するかパスが正しいか確認。';
+                    }
+                    showStatus(errorMsg, true);
+                    console.error(`Video Error (${isOtomad ? 'OtoMAD' : 'Redzone'}):`, videoElement.error, e);
+                    if (isOtomad) otomadLoaded = false; else redzoneLoaded = false;
+                    updateAllControlsAvailability();
+                };
+
+                // Listen for volume changes on the video element itself (e.g., if browser controls are used)
+                videoElement.onvolumechange = () => {
+                    if (isOtomad) {
+                        otomadVolume.value = videoElement.volume;
+                        otomadVolumeValue.textContent = Math.round(videoElement.volume * 100);
+                    } else {
+                        redzoneVolume.value = videoElement.volume;
+                        redzoneVolumeValue.textContent = Math.round(videoElement.volume * 100);
+                    }
+                     console.log(`${isOtomad ? 'OtoMAD' : 'Redzone'} volume changed to: ${videoElement.volume}`);
+                };
+            }
+            
+            // Initialize video elements and load sources
+            setupVideoEvents(otomadVideo, true);
+            otomadVideo.src = "音MAD.mp4";
+            otomadVideo.load();
+
+            setupVideoEvents(redzoneVideo, false);
+            redzoneVideo.src = "原曲.mp4";
+            redzoneVideo.load();
+            
+            updateAllControlsAvailability();
+
+            // --- Event Listeners ---
+            otomadLoop.addEventListener('change', () => {
+                if (otomadLoaded) {
+                    otomadVideo.loop = otomadLoop.checked;
+                    // If OtoMAD loop is checked, and both are loaded, loop Redzone too
+                    if (redzoneLoaded) {
+                        redzoneVideo.loop = otomadLoop.checked;
+                    }
+                }
+            });
+            otomadSeek.addEventListener('input', () => { if (otomadLoaded) otomadVideo.currentTime = otomadSeek.value; });
+            otomadVolume.addEventListener('input', () => {
+                if (otomadLoaded) {
+                    otomadVideo.volume = otomadVolume.value; // Directly control video element's volume
+                    otomadVolumeValue.textContent = Math.round(otomadVolume.value * 100);
+                }
+            });
+            // Panning controls are disabled. No event listener needed.
+
+            otomadVideo.addEventListener('timeupdate', () => {
+                if (otomadLoaded) {
+                    otomadSeek.value = otomadVideo.currentTime;
+                    otomadTime.textContent = `${formatTime(otomadVideo.currentTime)} / ${formatTime(otomadVideo.duration || 0)}`;
+                }
+            });
+
+            redzoneSeek.addEventListener('input', () => { if (redzoneLoaded) redzoneVideo.currentTime = redzoneSeek.value; });
+            redzoneVolume.addEventListener('input', () => {
+                if (redzoneLoaded) {
+                    redzoneVideo.volume = redzoneVolume.value; // Directly control video element's volume
+                    redzoneVolumeValue.textContent = Math.round(redzoneVolume.value * 100);
+                }
+            });
+            // Panning controls are disabled. No event listener needed.
+
+            redzoneVideo.addEventListener('timeupdate', () => {
+                if (redzoneLoaded) {
+                    redzoneSeek.value = redzoneVideo.currentTime;
+                    redzoneTime.textContent = `${formatTime(redzoneVideo.currentTime)} / ${formatTime(redzoneVideo.duration || 0)}`;
+                }
+            });
+
+            // Simplified handlePlayRequest as Web Audio API is removed
+            function handlePlayRequest(playFn) {
+                playFn(); // Directly call the play function
+            }
+
+            playOtomadOnlyBtn.addEventListener('click', () => {
+                if (!otomadLoaded) return;
+                handlePlayRequest(() => {
+                    if (redzoneLoaded && !redzoneVideo.paused) redzoneVideo.pause();
+                    console.log("Playing OtoMAD only. Volume:", otomadVideo.volume, "Muted:", otomadVideo.muted);
+                    otomadVideo.play().catch(e => {
+                        showStatus("音MADの再生に失敗: " + e.message, true);
+                        console.error("OtoMAD play error:", e);
+                    });
+                });
+            });
+
+            playBothBtn.addEventListener('click', () => {
+                if (!otomadLoaded || !redzoneLoaded) return;
+                handlePlayRequest(() => {
+                    const syncTime = parseFloat(masterSeek.value);
+                    [otomadVideo, redzoneVideo].forEach(v => {
+                        if (!v.paused) v.pause(); 
+                        v.currentTime = (syncTime <= (v.duration || Infinity)) ? syncTime : 0;
+                    });
+                    console.log("Playing both videos. OtoMAD Vol:", otomadVideo.volume, "Muted:", otomadVideo.muted, "Redzone Vol:", redzoneVideo.volume, "Muted:", redzoneVideo.muted);
+                    Promise.all([
+                        otomadVideo.play().catch(e => { console.error("OtoMAD play error (both):", e); throw e; }),
+                        redzoneVideo.play().catch(e => { console.error("Redzone play error (both):", e); throw e; })
+                    ]).catch(e => {
+                        showStatus("動画の再生に失敗: " + e.message, true);
+                    });
+                });
+            });
+
+            pauseBothBtn.addEventListener('click', () => {
+                if (otomadLoaded && !otomadVideo.paused) otomadVideo.pause();
+                if (redzoneLoaded && !redzoneVideo.paused) redzoneVideo.pause();
+                console.log("Paused both videos.");
+            });
+
+            resetBothBtn.addEventListener('click', () => {
+                if (otomadLoaded) { otomadVideo.pause(); otomadVideo.currentTime = 0; }
+                if (redzoneLoaded) { redzoneVideo.pause(); redzoneVideo.currentTime = 0; }
+                masterSeek.value = 0;
+                masterTime.textContent = `${formatTime(0)} / ${formatTime(masterSeek.max || 0)}`;
+                updatePlayPauseButtons();
+                console.log("Reset both videos.");
+            });
+            
+            // setDefaultPanBtn event listener is effectively disabled as button is disabled
+
+            masterSeek.addEventListener('input', () => {
+                const newTime = parseFloat(masterSeek.value);
+                if (otomadLoaded) {
+                     otomadVideo.currentTime = newTime <= (otomadVideo.duration || Infinity) ? newTime : 0;
+                }
+                if (redzoneLoaded) {
+                     redzoneVideo.currentTime = newTime <= (redzoneVideo.duration || Infinity) ? newTime : 0;
+                }
+                masterTime.textContent = `${formatTime(newTime)} / ${formatTime(masterSeek.max || 0)}`;
+            });
+            
+            /**
+             * Syncs the master seek slider with the currently playing video's time.
+             */
+            function syncMasterSeek() { 
+                let currentVideoTime = 0;
+                let currentVideoDuration = parseFloat(masterSeek.max);
+
+                if (otomadLoaded && !otomadVideo.paused) {
+                    currentVideoTime = otomadVideo.currentTime;
+                    currentVideoDuration = (redzoneLoaded && !redzoneVideo.paused) ? Math.min(otomadVideo.duration || 0, redzoneVideo.duration || 0) : (otomadVideo.duration || 0);
+                } else if (redzoneLoaded && !redzoneVideo.paused) {
+                    currentVideoTime = redzoneVideo.currentTime;
+                     currentVideoDuration = redzoneVideo.duration || 0; 
+                } else { 
+                    requestAnimationFrame(syncMasterSeek);
+                    return;
+                }
+                
+                if (currentVideoTime <= currentVideoDuration) {
+                    masterSeek.value = currentVideoTime;
+                    masterTime.textContent = `${formatTime(currentVideoTime)} / ${formatTime(currentVideoDuration || 0)}`;
+                }
+                requestAnimationFrame(syncMasterSeek);
+            }
+            requestAnimationFrame(syncMasterSeek);
+
+            console.log("DOM Content Loaded and script initialized. Panning features are temporarily disabled for audio troubleshooting.");
+        });
+    </script>
+
+</body>
+</html>
