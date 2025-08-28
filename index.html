@@ -11,20 +11,18 @@
         }
         video {
             background-color: #000;
-            min-height: 200px; /* 動画ロード前の最小高さ */
-            width: 100%; /* 幅を100%に設定 */
-            border-radius: 0.25rem; /* Tailwindのrounded相当 */
+            min-height: 200px;
+            width: 100%; 
+            border-radius: 0.25rem; 
         }
         .disabled-button {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        .disabled-control { /* 無効化されたコントロールの視覚的表示 */
+        .disabled-control { 
             opacity: 0.6;
         }
-        /* Firefoxのrange入力のデフォルトスピナーを隠す */
         input[type=range]::-moz-range-thumb {
-            /* 必要であればここでthumbのスタイルを調整 */
         }
     </style>
 </head>
@@ -114,11 +112,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Video elements
             const otomadVideo = document.getElementById('otomadVideo');
             const redzoneVideo = document.getElementById('redzoneVideo');
 
-            // Individual Controls
             const otomadLoop = document.getElementById('otomadLoop');
             const otomadSeek = document.getElementById('otomadSeek');
             const otomadVolume = document.getElementById('otomadVolume');
@@ -134,7 +130,6 @@
             const redzoneVolumeValue = document.getElementById('redzoneVolumeValue');
             const redzonePanValue = document.getElementById('redzonePanValue');
 
-            // Global Controls
             const playOtomadOnlyBtn = document.getElementById('playOtomadOnlyBtn');
             const playBothBtn = document.getElementById('playBothBtn');
             const pauseBothBtn = document.getElementById('pauseBothBtn');
@@ -146,26 +141,16 @@
             const statusMessage = document.getElementById('statusMessage');
             const errorMessages = document.getElementById('errorMessages');
 
-            // Flags for video loading status
             let otomadLoaded = false;
             let redzoneLoaded = false;
 
-            /**
-             * Formats time in seconds into M:SS format.
-             * @param {number} seconds - The time in seconds.
-             * @returns {string} Formatted time string.
-             */
+
             function formatTime(seconds) {
                 const secs = Math.floor(seconds % 60);
                 const minutes = Math.floor(seconds / 60);
                 return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
             }
 
-            /**
-             * Displays a status or error message.
-             * @param {string} message - The message to display.
-             * @param {boolean} isError - True if it's an error message, false for status.
-             */
             function showStatus(message, isError = false) {
                 const targetElement = isError ? errorMessages : statusMessage;
                 targetElement.textContent = message;
@@ -174,14 +159,12 @@
                 else errorMessages.classList.add('hidden');
             }
             
-            /**
-             * Updates the disabled state of all controls based on video loading status.
-             */
+
             function updateAllControlsAvailability() {
                 const otomadControlsDisabled = !otomadLoaded;
                 otomadSeek.disabled = otomadControlsDisabled;
                 otomadVolume.disabled = otomadControlsDisabled;
-                otomadPan.disabled = true; // Panning is disabled
+                otomadPan.disabled = true; 
                 otomadLoop.disabled = otomadControlsDisabled;
                 
                 playOtomadOnlyBtn.disabled = otomadControlsDisabled;
@@ -191,12 +174,12 @@
                 const redzoneControlsDisabled = !redzoneLoaded;
                 redzoneSeek.disabled = redzoneControlsDisabled;
                 redzoneVolume.disabled = redzoneControlsDisabled;
-                redzonePan.disabled = true; // Panning is disabled
+                redzonePan.disabled = true; 
 
                 const bothVideosLoaded = otomadLoaded && redzoneLoaded;
                 playBothBtn.disabled = !bothVideosLoaded; 
                 resetBothBtn.disabled = !bothVideosLoaded;
-                setDefaultPanBtn.disabled = true; // Panning is disabled
+                setDefaultPanBtn.disabled = true; 
                 masterSeek.disabled = !bothVideosLoaded;
 
                 if (bothVideosLoaded) {
@@ -224,10 +207,8 @@
                 }
                 updatePlayPauseButtons();
             }
-            
-            /**
-             * Updates the disabled state of play/pause buttons.
-             */
+
+
             function updatePlayPauseButtons() {
                 const otomadPlaying = otomadLoaded && !otomadVideo.paused;
                 const redzonePlaying = redzoneLoaded && !redzoneVideo.paused;
@@ -242,15 +223,9 @@
                 }
             }
 
-            /**
-             * Sets up common event listeners for video elements.
-             * @param {HTMLVideoElement} videoElement - The video element to set up events for.
-             * @param {boolean} isOtomad - True if it's the OtoMAD video, false for Redzone.
-             */
             function setupVideoEvents(videoElement, isOtomad) {
-                // Ensure video is unmuted by default for direct playback
                 videoElement.muted = false; 
-                videoElement.volume = 1; // Default to full volume for the element itself
+                videoElement.volume = 1;
 
                 videoElement.onloadedmetadata = () => {
                     console.log(`${isOtomad ? 'OtoMAD' : 'Redzone'} metadata loaded. Duration: ${videoElement.duration}. Muted: ${videoElement.muted}, Volume: ${videoElement.volume}`);
@@ -258,13 +233,13 @@
                         otomadLoaded = true;
                         otomadTime.textContent = `${formatTime(0)} / ${formatTime(videoElement.duration || 0)}`;
                         otomadSeek.max = videoElement.duration || 0;
-                        otomadVolume.value = videoElement.volume; // Sync slider with actual video volume
+                        otomadVolume.value = videoElement.volume;
                         otomadVolumeValue.textContent = Math.round(videoElement.volume * 100);
                     } else {
                         redzoneLoaded = true;
                         redzoneTime.textContent = `${formatTime(0)} / ${formatTime(videoElement.duration || 0)}`;
                         redzoneSeek.max = videoElement.duration || 0;
-                        redzoneVolume.value = videoElement.volume; // Sync slider
+                        redzoneVolume.value = videoElement.volume; 
                         redzoneVolumeValue.textContent = Math.round(videoElement.volume * 100);
                     }
                     updateAllControlsAvailability();
@@ -307,7 +282,6 @@
                     updateAllControlsAvailability();
                 };
 
-                // Listen for volume changes on the video element itself (e.g., if browser controls are used)
                 videoElement.onvolumechange = () => {
                     if (isOtomad) {
                         otomadVolume.value = videoElement.volume;
@@ -320,22 +294,19 @@
                 };
             }
             
-            // Initialize video elements and load sources with Firebase Hosting URLs
             setupVideoEvents(otomadVideo, true);
-            otomadVideo.src = "https://ymkw-mad.web.app/%E9%9F%B3MAD.mp4";
+            otomadVideo.src = "https://paicha.cloud/uploader/uploads/MAD.mp4";
             otomadVideo.load();
 
             setupVideoEvents(redzoneVideo, false);
-            redzoneVideo.src = "https://ymkw-mad.web.app/%E5%8E%9F%E6%9B%B2.mp4";
+            redzoneVideo.src = "https://paicha.cloud/uploader/uploads/.mp4";
             redzoneVideo.load();
             
             updateAllControlsAvailability();
 
-            // --- Event Listeners ---
             otomadLoop.addEventListener('change', () => {
                 if (otomadLoaded) {
                     otomadVideo.loop = otomadLoop.checked;
-                    // 音MADがループ設定されたら、原曲もループ設定を同期
                     if (redzoneLoaded) {
                         redzoneVideo.loop = otomadLoop.checked;
                     }
@@ -344,24 +315,21 @@
             otomadSeek.addEventListener('input', () => { if (otomadLoaded) otomadVideo.currentTime = otomadSeek.value; });
             otomadVolume.addEventListener('input', () => {
                 if (otomadLoaded) {
-                    otomadVideo.volume = otomadVolume.value; // Directly control video element's volume
+                    otomadVideo.volume = otomadVolume.value; 
                     otomadVolumeValue.textContent = Math.round(otomadVolume.value * 100);
                 }
             });
-            // Panning controls are disabled. No event listener needed.
 
             redzoneSeek.addEventListener('input', () => { if (redzoneLoaded) redzoneVideo.currentTime = redzoneSeek.value; });
             redzoneVolume.addEventListener('input', () => {
                 if (redzoneLoaded) {
-                    redzoneVideo.volume = redzoneVolume.value; // Directly control video element's volume
+                    redzoneVideo.volume = redzoneVolume.value;
                     redzoneVolumeValue.textContent = Math.round(redzoneVolume.value * 100);
                 }
             });
-            // Panning controls are disabled. No event listener needed.
 
-            // Simplified handlePlayRequest as Web Audio API is removed
             function handlePlayRequest(playFn) {
-                playFn(); // Directly call the play function
+                playFn(); 
             }
 
             playOtomadOnlyBtn.addEventListener('click', () => {
@@ -409,7 +377,6 @@
                 console.log("Reset both videos.");
             });
             
-            // setDefaultPanBtn event listener is effectively disabled as button is disabled
 
             masterSeek.addEventListener('input', () => {
                 const newTime = parseFloat(masterSeek.value);
@@ -422,9 +389,6 @@
                 masterTime.textContent = `${formatTime(newTime)} / ${formatTime(masterSeek.max || 0)}`;
             });
             
-            /**
-             * Syncs the master seek slider with the currently playing video's time.
-             */
             function syncMasterSeek() { 
                 let currentVideoTime = 0;
                 let currentVideoDuration = parseFloat(masterSeek.max);
@@ -444,7 +408,6 @@
                     masterSeek.value = currentVideoTime;
                     masterTime.textContent = `${formatTime(currentVideoTime)} / ${formatTime(currentVideoDuration || 0)}`;
 
-                    // 個別のシークバーも同期
                     if (otomadLoaded) {
                         otomadSeek.value = otomadVideo.currentTime;
                         otomadTime.textContent = `${formatTime(otomadVideo.currentTime)} / ${formatTime(otomadVideo.duration || 0)}`;
@@ -464,3 +427,4 @@
 
 </body>
 </html>
+
